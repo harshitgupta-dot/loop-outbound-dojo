@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Loop Outbound Dojo (Voice)</title>
+  <style>
+    :root { --bg:#ffffff; --muted:#6b7280; --border:#e5e7eb; --ink:#111827; --soft:#f9fafb; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:var(--bg); color:var(--ink); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px; }
+    h1 { margin: 6px 0 6px; font-size: 28px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns:1fr; } }
+    .card { border:1px solid var(--border); border-radius: 14px; padding: 14px; background:#fff; }
+    .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    select, button, textarea { font: inherit; }
+    select { width: 100%; padding: 10px; border-radius: 12px; border:1px solid #d1d5db; }
+    .soft { background: var(--soft); border-radius: 12px; padding: 12px; }
+    .soft .label { margin-bottom: 4px; }
+    .btnrow { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+    button { padding: 10px 12px; border-radius: 12px; border:1px solid #d1d5db; background: #fff; cursor:pointer; }
+    button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+    button:disabled { opacity: .55; cursor:not-allowed; }
+    ul { margin: 8px 0 0 18px; }
+    li { margin: 6px 0; }
+    .pillrow { display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
+    .pill { border:1px solid var(--border); border-radius: 12px; padding: 10px 12px; min-width: 140px; }
+    .pill .k { font-size: 12px; color: var(--muted); }
+    .pill .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    .alert { padding: 12px; border-radius: 12px; }
+    .alert.warn { background:#fff3cd; border:1px solid #ffeeba; }
+    .alert.fail { background:#fef2f2; border:1px solid #fecaca; }
+    .alert.good { background:#ecfdf5; border:1px solid #a7f3d0; }
+    .alert.fix { background:#eff6ff; border:1px solid #bfdbfe; }
+    .dash { border:1px dashed #d1d5db; border-radius: 12px; padding: 12px; margin-top: 12px; }
+    .mono { white-space: pre-wrap; word-break: break-word; }
+    .footer { margin-top: 14px; font-size: 12px; color: var(--muted); }
+    .small { font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .inlinecode { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background:#f3f4f6; padding: 2px 6px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Loop Outbound Dojo (Voice)</h1>
+    <p>Train curiosity creation. No pitching. One sharp question. Brutal scoring.</p>
+
+    <div id="supportAlert" class="alert warn" style="display:none; margin-bottom: 12px;"></div>
+
+    <div class="grid">
+      <!-- Scenario -->
+      <div class="card">
+        <h2 style="margin:0 0 10px; font-size:18px;">Scenario</h2>
+
+        <div class="label">Pick a flash card</div>
+        <select id="scenarioSelect"></select>
+
+        <div class="soft" style="margin-top: 12px;">
+          <div class="label">Prospect says</div>
+          <div id="prospectLine" style="font-size: 16px; margin-top: 6px;"></div>
+        </div>
+
+        <div class="btnrow">
+          <button id="playProspect">▶︎ Play prospect line</button>
+          <button id="randomScenario">🎲 Random card</button>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <div class="label">Rules</div>
+          <ul id="rulesList"></ul>
+
+          <div class="label" style="margin-top: 12px;">Banned phrases (auto-fail)</div>
+          <div id="bannedList" class="small"></div>
+
+        <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+          <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px;">
+            <div>
+              <div class="label" style="margin:0;">What to say (coach mode)</div>
+              <div class="small">Read it once → then repeat it on voice until it’s natural.</div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); user-select:none;">
+              <input id="coachToggle" type="checkbox" checked />
+              Show
+            </label>
+          </div>
+
+          <div id="coachBox" class="soft" style="margin-top: 10px;">
+            <div class="label">Structure</div>
+            <div id="coachStructure" class="mono"></div>
+            <div class="label" style="margin-top: 10px;">Suggested line(s)</div>
+            <ul id="coachLines" style="margin-top: 6px;"></ul>
+            <div class="label" style="margin-top: 10px;">Memorize this constraint</div>
+            <div class="small"><span class="inlinecode">1 sentence + 1 question</span> • <span class="inlinecode">no tool names</span> • <span class="inlinecode">no pitch words</span></div>
+          </div>
+        </div>
+
+        </div>
+      </div>
+
+      <!-- Practice -->
+      <div class="card">
+        <h2 style="margin:0 0 10px; font-size:18px;">Your response (voice)</h2>
+
+        <div class="btnrow">
+          <button id="startBtn">🎙️ Start talking</button>
+          <button id="stopBtn" class="primary" disabled>✅ Stop + score</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="soft" style="margin-top: 12px; min-height: 120px;">
+          <div class="label">Transcript</div>
+          <div id="transcript" class="mono">—</div>
+        </div>
+
+        <div id="results" style="display:none;">
+          <div class="pillrow" id="statsRow"></div>
+
+          <div id="autofailBox" class="alert fail" style="display:none; margin-top: 12px;"></div>
+
+          <div style="margin-top: 12px; display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="alert good">
+              <div style="font-weight:800;">Wins</div>
+              <ul id="winsList"></ul>
+            </div>
+            <div class="alert fix">
+              <div style="font-weight:800;">Fixes</div>
+              <ul id="fixesList"></ul>
+            </div>
+          </div>
+
+          <div class="soft" style="margin-top: 12px;">
+            <div class="label">Gold example (reference)</div>
+            <div id="goldExample" class="mono"></div>
+          </div>
+
+          <div class="dash">
+            <div style="font-weight:800;">Next drill (5 reps)</div>
+            <div class="small" style="margin-top:6px;">
+              Repeat this exact scenario 5 times with a tighter response:
+              <br><b>1 sentence + 1 question.</b> Aim for <b>Curiosity Index ≥ 75</b>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Best in <b>Chrome desktop</b>. If audio won’t play, check browser permissions.
+      Banned phrases are intentionally strict to force <i>restraint</i>.
+    </div>
+  </div>
+
+<script>
+  // -------------------------
+  // Scenario deck (12 cards)
+  // -------------------------
+  const SCENARIOS = [
+    {
+      id: "1",
+      title: "Negative Intent ≠ Churn",
+      prospectLine: "Our churn looks fine.",
+      instructions: [
+        "Create curiosity without mentioning: churn reduction, save rates, Loop, tools.",
+        "Ask ONE question."
+      ],
+      banned: ["reduce churn","improve retention","increase ltv","save rate","demo","migration","recharge","loop"],
+      structure: "1 short setup (optional) + 1 sharp question. Don't explain the solution.",
+      whatToSay: [
+        "Quick one — when someone opens your subscription portal today, do you know why they’re there… or just what action they took?"
+      ],
+      gold: "When someone opens your subscription portal today, do you know why they’re there — or just what action they ended up taking?"
+    },
+    {
+      id: "2",
+      title: "You’re happy? Good.",
+      prospectLine: "We’re pretty happy with our current setup.",
+      instructions: [
+        "Do not compare tools. Do not pitch.",
+        "Introduce a blind spot with ONE question."
+      ],
+      banned: ["feature parity","recharge","loop","migration","demo","switch"],
+      structure: "Agree → move to blind spot question. Keep it non-defensive.",
+      whatToSay: [
+        "That makes sense. Quick question — do you know why subscribers open the portal, or only what they do once they’re there?"
+      ],
+      gold: "That makes sense. Quick question — do you know why subscribers open the portal, or only what they do once they’re there?"
+    },
+    {
+      id: "3",
+      title: "Save Rate is Lagging",
+      prospectLine: "Our save rates are pretty good.",
+      instructions: [
+        "Reframe the metric without defending.",
+        "Ask ONE question."
+      ],
+      banned: ["a/b","ab test","dynamic rules","loop","recharge","migration","demo"],
+      structure: "Shift from outcome → mechanics. Ask about variation by reason.",
+      whatToSay: [
+        "When someone reaches the cancel screen, does every subscriber see the same experience — or does it change based on why they’re cancelling?"
+      ],
+      gold: "When someone reaches the cancel screen, does every subscriber see the same experience — or does it change based on why they’re cancelling?"
+    },
+    {
+      id: "4",
+      title: "Portal = Intent Surface",
+      prospectLine: "I’m in the middle of something — make it quick.",
+      instructions: [
+        "You have 10–15 seconds.",
+        "Reframe the portal’s role with ONE contrast question."
+      ],
+      banned: ["upsell","cross-sell","gamification","loop","recharge","demo"],
+      structure: "Contrast question: settings page vs highest-intent moment.",
+      whatToSay: [
+        "Random question — do you think of your subscription portal as a settings page, or the highest-intent moment in your customer lifecycle?"
+      ],
+      gold: "Random question — do you think of your subscription portal as a settings page, or the highest-intent moment in your customer lifecycle?"
+    },
+    {
+      id: "5",
+      title: "Support vs Revenue Surface",
+      prospectLine: "The portal just helps customers manage their subscription.",
+      instructions: [
+        "Create curiosity without pitching.",
+        "Ask ONE question."
+      ],
+      banned: ["monetize","gamification","loop","recharge","demo","upsell","cross-sell"],
+      structure: "Validate → ask support vs revenue surface question.",
+      whatToSay: [
+        "Totally. Out of curiosity — is it treated more as a support surface today, or a revenue surface?"
+      ],
+      gold: "Totally. Out of curiosity — is it treated more as a support surface today, or a revenue surface?"
+    },
+    {
+      id: "6",
+      title: "Ops Kills Good Ideas",
+      prospectLine: "We’ve thought about improving retention, but it gets complicated.",
+      instructions: [
+        "Surface the real blocker.",
+        "Do not propose solutions."
+      ],
+      banned: ["bulk actions","backend","tool","platform","loop","recharge","demo"],
+      structure: "Name the constraint (ops) and ask which side kills it.",
+      whatToSay: [
+        "When ideas like that come up internally, do they stall because of impact — or because of operational complexity?"
+      ],
+      gold: "When ideas like that come up internally, do they stall because of impact — or because of operational complexity?"
+    },
+    {
+      id: "7",
+      title: "Velocity > Features",
+      prospectLine: "All these tools are basically the same.",
+      instructions: [
+        "Reframe away from features.",
+        "Ask ONE question."
+      ],
+      banned: ["more features","better features","parity","loop","recharge","demo"],
+      structure: "Agree → shift axis to execution speed.",
+      whatToSay: [
+        "That’s fair. When you want to test a new retention idea, how long does it usually take to go live?"
+      ],
+      gold: "That’s fair. When you want to test a new retention idea, how long does it usually take to go live?"
+    },
+    {
+      id: "8",
+      title: "Feature Parity Trap",
+      prospectLine: "We’re not missing any features.",
+      instructions: [
+        "Don’t defend. Shift the axis to execution.",
+        "Ask ONE question."
+      ],
+      banned: ["roadmap","parity","loop","recharge","demo","features we have"],
+      structure: "Shift from features → constraints/velocity in one line.",
+      whatToSay: [
+        "Makes sense. Do you feel limited more by what’s possible, or by how fast you can actually execute ideas?"
+      ],
+      gold: "Makes sense. Do you feel limited more by what’s possible, or by how fast you can actually execute ideas?"
+    },
+    {
+      id: "9",
+      title: "Migration Fear Reframe",
+      prospectLine: "We don’t want to risk breaking things.",
+      instructions: [
+        "Reframe risk without reassuring too early.",
+        "Ask ONE question."
+      ],
+      banned: ["easy migration","we handle","no risk","loop","recharge","demo"],
+      structure: "Validate risk → split technical vs internal risk.",
+      whatToSay: [
+        "Totally fair. Is that risk more about technical breakage — or internal risk if something goes wrong?"
+      ],
+      gold: "Totally fair. Is that risk more about technical breakage — or internal risk if something goes wrong?"
+    },
+    {
+      id: "10",
+      title: "Opportunity Cost of Inaction",
+      prospectLine: "Switching tools isn’t a priority.",
+      instructions: [
+        "Introduce cost of not changing without pitching.",
+        "Ask ONE question."
+      ],
+      banned: ["roi","demo","calendar","meet","loop","recharge","migration"],
+      structure: "Accept priority → introduce cost-of-inaction lens.",
+      whatToSay: [
+        "Understood. How do you usually think about the cost of not changing anything when subscriber behavior is shifting?"
+      ],
+      gold: "Understood. How do you usually think about the cost of not changing anything when subscriber behavior is shifting?"
+    },
+    {
+      id: "11",
+      title: "Withhold the Solution",
+      prospectLine: "So what do you actually do?",
+      instructions: [
+        "Do NOT explain Loop.",
+        "Ask a question that deepens the lens."
+      ],
+      banned: ["we are loop","loop subscriptions","our platform","demo","we help you"],
+      structure: "Deflect explanation → ask an intent mechanics question.",
+      whatToSay: [
+        "Before I go there — how are you thinking about subscriber intent today when someone skips, delays, or updates billing?"
+      ],
+      gold: "Before I go there — how are you thinking about subscriber intent today when someone skips, delays, or updates billing?"
+    },
+    {
+      id: "12",
+      title: "Plant the Open Loop",
+      prospectLine: "Alright, I have to run.",
+      instructions: [
+        "No CTA. No meeting ask.",
+        "Leave them thinking in one sentence."
+      ],
+      banned: ["can we book","calendar","meet","demo","show you","loop"],
+      structure: "One sentence. No ask. Create an open loop.",
+      whatToSay: [
+        "Interesting — most teams don’t realize how much revenue leaks before a cancel ever happens. Might be worth looking at."
+      ],
+      gold: "Interesting — most teams don’t realize how much revenue leaks before a cancel ever happens. Might be worth looking at."
+    }
+  ];
+
+  // -------------------------
+  // Speech helpers
+  // -------------------------
+  function speak(text){
+    if(!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.0; u.pitch = 1.0;
+    window.speechSynthesis.speak(u);
+  }
+
+  function showBanner(kind, htmlMsg){
+    const el = document.getElementById("supportAlert");
+    if(!el) return;
+    el.style.display = "block";
+    el.className = "alert " + (kind || "warn");
+    el.innerHTML = htmlMsg;
+  }
+
+  function clearBanner(){
+    const el = document.getElementById("supportAlert");
+    if(!el) return;
+    el.style.display = "none";
+    el.innerHTML = "";
+  }
+
+  function norm(s){ return (s||"").toLowerCase().replace(/\s+/g," ").trim(); }
+
+  function evaluateResponse(scenario, transcriptRaw){
+    const transcript = norm(transcriptRaw);
+    const bannedHits = scenario.banned.filter(b => transcript.includes(norm(b)));
+
+    const hasQuestion = transcript.includes("?") || /\b(what|why|how|when|where|do you|have you|are you|is it)\b/.test(transcript);
+    const hasReframeCue = /\b(random question|out of curiosity|quick question|curious|most teams|very few|often|usually)\b/.test(transcript);
+
+    const mentionsLoop = /\bloop\b/.test(transcript);
+    const mentionsTool = /\b(recharge|ordergroove|stay\.ai|smartrr|skio)\b/.test(transcript);
+
+    const tooPitchy = /\b(help you|we help|increase|improve|reduce|boost|platform|solution|software|features|roi|case study)\b/.test(transcript);
+
+    const wordCount = transcript ? transcript.split(" ").length : 0;
+
+    const autoFailReasons = [];
+    if(bannedHits.length) autoFailReasons.push(`Used banned phrase(s): ${bannedHits.join(", ")}`);
+    if(mentionsLoop) autoFailReasons.push("Mentioned Loop before earning curiosity.");
+    if(mentionsTool) autoFailReasons.push("Named competitor/tool too early.");
+    if(!transcript || wordCount < 5) autoFailReasons.push("Too short to evaluate (say more than a few words).");
+
+    const autoFail = autoFailReasons.length > 0;
+
+    let curiosityIndex = 0;
+    if(hasQuestion) curiosityIndex += 40;
+    if(hasReframeCue) curiosityIndex += 25;
+    if(!tooPitchy) curiosityIndex += 20;
+    if(!mentionsTool && !mentionsLoop) curiosityIndex += 15;
+
+    if(wordCount > 55) curiosityIndex -= 10;
+    if(wordCount > 80) curiosityIndex -= 20;
+
+    curiosityIndex = Math.max(0, Math.min(100, curiosityIndex));
+
+    let score = curiosityIndex;
+    if(!hasQuestion) score -= 20;
+    if(tooPitchy) score -= 15;
+
+    score = Math.max(0, Math.min(100, score));
+
+    const wins = [];
+    const fixes = [];
+
+    if(hasQuestion) wins.push("You asked a question (good — curiosity needs a hook).");
+    else fixes.push("Ask ONE sharp question. No statements.");
+
+    if(hasReframeCue) wins.push("You used a reframe cue (signals operator thinking).");
+    else fixes.push("Use a reframe cue: “Quick question…” / “Out of curiosity…” / “Most teams miss…”");
+
+    if(!tooPitchy) wins.push("You avoided pitching (good — keep the solution withheld).");
+    else fixes.push("Remove pitch words. Don’t say “we help / increase / improve / platform / solution”.");
+
+    if(!mentionsTool && !mentionsLoop) wins.push("No tool-naming (good — keeps it non-defensive).");
+    else fixes.push("Don’t name Loop/competitors until they ask after curiosity is created.");
+
+    if(wordCount > 55) fixes.push("Tighten. 1 sentence + 1 question max.");
+
+    if(autoFail){
+      score = 0; curiosityIndex = 0;
+    }
+
+    return {
+      score, curiosityIndex, autoFail, autoFailReasons,
+      wins: wins.slice(0,3), fixes: fixes.slice(0,3),
+      detected: { bannedHits, hasQuestion, hasReframeCue, mentionsTool, mentionsLoop, tooPitchy, wordCount }
+    };
+  }
+
+  function prospectReply(result){
+    if(result.autoFail){
+      return "I’m going to stop you there — that felt salesy. What’s the one question you actually want answered?";
+    }
+    if(result.curiosityIndex >= 75) return "Okay… that’s interesting. What do you mean by “intent” in the portal?";
+    if(result.curiosityIndex >= 55) return "Maybe. Why are you asking me that specifically?";
+    if(result.curiosityIndex >= 35) return "Not sure I follow. Can you make that more concrete — in one sentence?";
+    return "I’m busy — can you just email me?";
+  }
+
+  // -------------------------
+  // UI wiring
+  // -------------------------
+  const scenarioSelect = document.getElementById("scenarioSelect");
+  const prospectLineEl = document.getElementById("prospectLine");
+  const rulesList = document.getElementById("rulesList");
+  const bannedList = document.getElementById("bannedList");
+  const coachToggle = document.getElementById("coachToggle");
+  const coachBox = document.getElementById("coachBox");
+  const coachStructure = document.getElementById("coachStructure");
+  const coachLines = document.getElementById("coachLines");
+
+
+  const playProspectBtn = document.getElementById("playProspect");
+  const randomScenarioBtn = document.getElementById("randomScenario");
+
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const transcriptEl = document.getElementById("transcript");
+
+  const resultsWrap = document.getElementById("results");
+  const statsRow = document.getElementById("statsRow");
+  const winsList = document.getElementById("winsList");
+  const fixesList = document.getElementById("fixesList");
+  const goldExample = document.getElementById("goldExample");
+  const autofailBox = document.getElementById("autofailBox");
+
+  let currentScenario = SCENARIOS[0];
+  let recognition = null;
+  let listening = false;
+  let transcriptRaw = "";
+
+  function renderScenario(){
+    prospectLineEl.textContent = `“${currentScenario.prospectLine}”`;
+    rulesList.innerHTML = "";
+    currentScenario.instructions.forEach(x=>{
+      const li = document.createElement("li");
+      li.textContent = x;
+      rulesList.appendChild(li);
+    });
+    bannedList.textContent = currentScenario.banned.join(", ");
+    // Coach mode content
+    if (coachStructure) coachStructure.textContent = currentScenario.structure || "";
+    if (coachLines) {
+      coachLines.innerHTML = "";
+      (currentScenario.whatToSay || [currentScenario.gold]).forEach(line => {
+        const li = document.createElement("li");
+        li.textContent = line;
+        coachLines.appendChild(li);
+      });
+    }
+
+    goldExample.textContent = currentScenario.gold;
+    resultsWrap.style.display = "none";
+    autofailBox.style.display = "none";
+    statsRow.innerHTML = "";
+    winsList.innerHTML = "";
+    fixesList.innerHTML = "";
+    transcriptEl.textContent = "—";
+    transcriptRaw = "";
+  }
+
+  // populate select
+  SCENARIOS.forEach(s=>{
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = `${s.id}. ${s.title}`;
+    scenarioSelect.appendChild(opt);
+  });
+
+  scenarioSelect.addEventListener("change", ()=>{
+    const id = scenarioSelect.value;
+    currentScenario = SCENARIOS.find(s=>s.id===id) || SCENARIOS[0];
+    renderScenario();
+  });
+
+  randomScenarioBtn.addEventListener("click", ()=>{
+    const idx = Math.floor(Math.random() * SCENARIOS.length);
+    currentScenario = SCENARIOS[idx];
+    scenarioSelect.value = currentScenario.id;
+    renderScenario();
+  });
+
+  playProspectBtn.addEventListener("click", ()=>{
+    speak(currentScenario.prospectLine);
+  });
+
+  resetBtn.addEventListener("click", ()=>{
+    window.speechSynthesis?.cancel();
+    if(recognition && listening){
+      try{ recognition.stop(); }catch(e){}
+    }
+    listening = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    renderScenario();
+  });
+
+  function statPill(label, value){
+    const d = document.createElement("div");
+    d.className = "pill";
+    d.innerHTML = `<div class="k">${label}</div><div class="v">${value}</div>`;
+    return d;
+  }
+
+  function listInto(ulEl, items){
+    ulEl.innerHTML = "";
+    if(!items || !items.length){
+      const li = document.createElement("li"); li.textContent = "—"; ulEl.appendChild(li); return;
+    }
+    items.forEach(x=>{
+      const li = document.createElement("li"); li.textContent = x; ulEl.appendChild(li);
+    });
+  }
+
+  // SpeechRecognition support
+  const supportAlert = document.getElementById("supportAlert");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!SR){
+    supportAlert.style.display = "block";
+    supportAlert.innerHTML = `
+      <b>Heads up:</b> Voice recognition isn’t supported in this browser.
+      Use <b>Chrome on desktop</b>. The app still opens, but voice practice won’t work here.
+    `;
+    startBtn.disabled = true;
+  } else {
+    recognition = new SR();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onresult = (event)=>{
+      let text = "";
+      for(let i=event.resultIndex; i<event.results.length; i++){
+        text += event.results[i][0].transcript;
+      }
+      transcriptRaw = text;
+      transcriptEl.textContent = listening ? (text || "Listening…") : (text || "—");
+    };
+
+    recognition.onend = ()=>{
+      listening = false;
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      transcriptEl.textContent = transcriptRaw || "—";
+    };
+  }
+
+  startBtn.addEventListener("click", ()=>{
+    clearBanner();
+    if(!recognition) return;
+    resultsWrap.style.display = "none";
+    autofailBox.style.display = "none";
+    statsRow.innerHTML = "";
+    winsList.innerHTML = "";
+    fixesList.innerHTML = "";
+    transcriptRaw = "";
+    transcriptEl.textContent = "Listening…";
+    listening = true;
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    try { recognition.start(); } catch(e){ /* ignore */ }
+  });
+
+  stopBtn.addEventListener("click", ()=>{
+    if(!recognition) return;
+    try { recognition.stop(); } catch(e){ /* ignore */ }
+    stopBtn.disabled = true;
+
+    // score after a beat
+    setTimeout(()=>{
+      try{
+            const r = evaluateResponse(currentScenario, transcriptRaw);
+            resultsWrap.style.display = "block";
+      
+            statsRow.innerHTML = "";
+            statsRow.appendChild(statPill("Score", r.score));
+            statsRow.appendChild(statPill("Curiosity Index", r.curiosityIndex));
+            statsRow.appendChild(statPill("Words", r.detected.wordCount));
+            statsRow.appendChild(statPill("Auto-fail", r.autoFail ? "YES" : "NO"));
+      
+            if(r.autoFail){
+              autofailBox.style.display = "block";
+              autofailBox.innerHTML = `<div style="font-weight:800;">Auto-fail reasons</div><ul>${r.autoFailReasons.map(x=>`<li>${x}</li>`).join("")}</ul>`;
+            } else {
+              autofailBox.style.display = "none";
+            }
+      
+            listInto(winsList, r.wins);
+            listInto(fixesList, r.fixes);
+            goldExample.textContent = currentScenario.gold;
+      
+            // prospect speaks back
+            speak(prospectReply(r));
+      } catch(err){
+        console.error(err);
+        showBanner("warn", "<b>Scoring failed.</b> Open this file in <b>Chrome desktop</b> (secure origin helps), then try again. If you can, open DevTools Console and share the error.<br><br><span class='inlinecode'>"+ String(err) +"</span>");
+      }
+    }, 300);
+  });
+
+  
+  if (coachToggle && coachBox) {
+    coachToggle.addEventListener("change", () => {
+      coachBox.style.display = coachToggle.checked ? "block" : "none";
+    });
+    coachBox.style.display = coachToggle.checked ? "block" : "none";
+  }
+  // Warn if opened as a local file (file://). Some browsers block speech features on insecure origins.
+  if (location && location.protocol === "file:") {
+    showBanner("warn", "<b>Tip:</b> You opened this as a local file (<span class='inlinecode'>file://</span>). If voice or scoring behaves weirdly, run it from <b>https</b> or <b>localhost</b> (e.g., GitHub Pages / Vercel / Netlify / local server).");
+  }
+
+  // init
+  renderScenario();
+</script>
+</body>
+</html>
